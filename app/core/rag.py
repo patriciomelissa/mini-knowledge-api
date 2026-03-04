@@ -38,7 +38,7 @@ class RAGService:
         if not filtered_results:
             return {
                 "answer": "I could not find relevant information in the documents.",
-                "sources": []
+                "sources": [],
             }
 
         # Construir contexto apenas com relevantes
@@ -48,11 +48,7 @@ class RAGService:
         # 🔥 Só agora chamamos o LLM
         answer = self.llm.generate_answer(context, question)
 
-        return {
-            "answer": answer,
-            "sources": ["local_documents"]
-        }
-
+        return {"answer": answer, "sources": ["local_documents"]}
 
     def reindex(self):
         """

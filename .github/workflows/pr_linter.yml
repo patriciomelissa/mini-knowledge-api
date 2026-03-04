@@ -1,0 +1,31 @@
+name: Lint Check
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lint tools
+        run: |
+          pip install black isort flake8
+
+      - name: Run lint validation
+        run: |
+          black --check .
+          isort --check .
+          flake8 .

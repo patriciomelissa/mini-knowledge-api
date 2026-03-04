@@ -25,12 +25,8 @@ Answer:
 
         response = requests.post(
             self.url,
-            json={
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False
-            },
-            timeout=60
+            json={"model": self.model, "prompt": prompt, "stream": False},
+            timeout=60,
         )
 
         response.raise_for_status()

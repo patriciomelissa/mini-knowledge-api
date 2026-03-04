@@ -10,7 +10,4 @@ router = APIRouter()
 def ask_question(request: AskRequest):
     result = rag_service.ask(request.question)
 
-    return AskResponse(
-        answer=result["answer"],
-        sources=result["sources"]
-    )
+    return AskResponse(answer=result["answer"], sources=result["sources"])
