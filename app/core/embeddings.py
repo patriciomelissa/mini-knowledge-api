@@ -14,20 +14,14 @@ class EmbeddingServiceOpenAI:
 
     def embed_text(self, text: str) -> List[float]:
         """Generate embedding for a single text."""
-        response = self.client.embeddings.create(
-            model=self.model,
-            input=text
-        )
+        response = self.client.embeddings.create(model=self.model, input=text)
         return response.data[0].embedding
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Generate embeddings for multiple texts."""
-        response = self.client.embeddings.create(
-            model=self.model,
-            input=texts
-        )
+        response = self.client.embeddings.create(model=self.model, input=texts)
         return [item.embedding for item in response.data]
-    
+
 
 class EmbeddingService:
 

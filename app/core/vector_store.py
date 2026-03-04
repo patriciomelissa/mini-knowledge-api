@@ -19,7 +19,9 @@ class VectorStore:
         self.index.add(vectors)
         self.text_chunks.extend(chunks)
 
-    def search(self, query_embedding: List[float], top_k: int = None) -> List[Tuple[str, float]]:
+    def search(
+        self, query_embedding: List[float], top_k: int = None
+    ) -> List[Tuple[str, float]]:
         if top_k is None:
             top_k = parameters.TOP_K
 
@@ -35,9 +37,15 @@ class VectorStore:
 
     def save(self):
         os.makedirs(parameters.VECTOR_STORE_PATH, exist_ok=True)
-        faiss.write_index(self.index, os.path.join(parameters.VECTOR_STORE_PATH, "index.faiss"))
+        faiss.write_index(
+            self.index, os.path.join(parameters.VECTOR_STORE_PATH, "index.faiss")
+        )
 
-        with open(os.path.join(parameters.VECTOR_STORE_PATH, "chunks.txt"), "w", encoding="utf-8") as f:
+        with open(
+            os.path.join(parameters.VECTOR_STORE_PATH, "chunks.txt"),
+            "w",
+            encoding="utf-8",
+        ) as f:
             for chunk in self.text_chunks:
                 f.write(chunk.replace("\n", " ") + "\n")
 
