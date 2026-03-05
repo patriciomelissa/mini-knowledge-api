@@ -1,5 +1,6 @@
+import json
 import os
-from typing import List, Tuple
+from typing import Any, Dict, List
 
 import faiss
 import numpy as np
@@ -12,16 +13,16 @@ class VectorStore:
     def __init__(self, dimension: int):
         self.dimension = dimension
         self.index = faiss.IndexFlatL2(dimension)
-        self.text_chunks = []
+        self.metadata = []
 
-    def add_embeddings(self, embeddings: List[List[float]], chunks: List[str]):
+    def add_embeddings(self, embeddings: List[List[float]], documents: List[Dict]):
         vectors = np.array(embeddings).astype("float32")
         self.index.add(vectors)
-        self.text_chunks.extend(chunks)
+        self.metadata.extend(documents)
 
     def search(
         self, query_embedding: List[float], top_k: int = None
-    ) -> List[Tuple[str, float]]:
+    ) -> List[Dict[str, Any]]:
         if top_k is None:
             top_k = parameters.TOP_K
 
@@ -30,32 +31,43 @@ class VectorStore:
 
         results = []
         for idx, dist in zip(indices[0], distances[0]):
-            if idx < len(self.text_chunks):
-                results.append((self.text_chunks[idx], float(dist)))
+            if idx < len(self.metadata):
+                results.append(
+                    {
+                        "text": self.metadata[idx]["text"],
+                        "document": self.metadata[idx]["document"],
+                        "chunk_id": self.metadata[idx]["chunk_id"],
+                        "score": float(dist),
+                    }
+                )
 
         return results
 
     def save(self):
+        # create the vector_store folder
         os.makedirs(parameters.VECTOR_STORE_PATH, exist_ok=True)
+        # create the index.faiss file
         faiss.write_index(
             self.index, os.path.join(parameters.VECTOR_STORE_PATH, "index.faiss")
         )
 
+        # create the json file with metadata
         with open(
-            os.path.join(parameters.VECTOR_STORE_PATH, "chunks.txt"),
+            os.path.join(parameters.VECTOR_STORE_PATH, "chunks_metadata.json"),
             "w",
             encoding="utf-8",
         ) as f:
-            for chunk in self.text_chunks:
-                f.write(chunk.replace("\n", " ") + "\n")
+            json.dump(self.metadata, f, ensure_ascii=False, indent=4)
 
     def load(self):
         index_path = os.path.join(parameters.VECTOR_STORE_PATH, "index.faiss")
-        chunks_path = os.path.join(parameters.VECTOR_STORE_PATH, "chunks.txt")
+        chunks_metadata_path = os.path.join(
+            parameters.VECTOR_STORE_PATH, "chunks_metadata.json"
+        )
 
         if os.path.exists(index_path):
             self.index = faiss.read_index(index_path)
 
-        if os.path.exists(chunks_path):
-            with open(chunks_path, "r", encoding="utf-8") as f:
-                self.text_chunks = f.read().splitlines()
+        if os.path.exists(chunks_metadata_path):
+            with open(chunks_metadata_path, "r", encoding="utf-8") as f:
+                self.metadata = json.load(f)
