@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from app.config import parameters
 from app.core.embeddings import EmbeddingService
@@ -24,31 +24,16 @@ class RAGService:
     def ask(self, question: str) -> dict:
         self._ensure_initialized()
 
-        query_embedding = self.embedder.embed_text(question)
-        results = self.vector_store.search(query_embedding)
+        retrieval_results = self._retrieve(question)
 
-        # Filtrar por threshold
-        filtered_results = [
-            (chunk, score)
-            for chunk, score in results
-            if score <= parameters.MAX_DISTANCE
-        ]
+        if not retrieval_results:
+            return self._build_empty_response()
 
-        # Se nada relevante
-        if not filtered_results:
-            return {
-                "answer": "I could not find relevant information in the documents.",
-                "sources": [],
-            }
+        context = self._build_context(retrieval_results)
 
-        # Construir contexto apenas com relevantes
-        context_chunks = [r[0] for r in filtered_results]
-        context = "\n\n".join(context_chunks)
-
-        # 🔥 Só agora chamamos o LLM
         answer = self.llm.generate_answer(context, question)
 
-        return {"answer": answer, "sources": ["local_documents"]}
+        return self._build_success_response(answer, retrieval_results)
 
     def reindex(self):
         """
@@ -58,7 +43,7 @@ class RAGService:
         self.is_initialized = True
 
     # -----------------------------
-    # INTERNAL LOGIC
+    # INTERNAL STEPS
     # -----------------------------
 
     def initialize(self):
@@ -89,12 +74,15 @@ class RAGService:
     def _create_index(self):
         print("Creating new vector index...")
 
-        chunks = self.processor.process_documents()
-        embeddings = self.embedder.embed_documents(chunks)
+        documents = self.processor.process_documents()
+
+        raw_texts = [doc["text"] for doc in documents]
+
+        embeddings = self.embedder.embed_documents(raw_texts)
 
         dimension = len(embeddings[0])
         self.vector_store = VectorStore(dimension)
-        self.vector_store.add_embeddings(embeddings, chunks)
+        self.vector_store.add_embeddings(embeddings, documents)
         self.vector_store.save()
 
     def _load_index(self):
@@ -105,3 +93,33 @@ class RAGService:
 
         self.vector_store = VectorStore(dimension)
         self.vector_store.load()
+
+    def _retrieve(self, question: str) -> List[Dict[str, Any]]:
+        query_embedding = self.embedder.embed_text(question)
+        results = self.vector_store.search(query_embedding)
+
+        filtered = [res for res in results if res["score"] <= parameters.MAX_DISTANCE]
+
+        return filtered
+
+    def _build_context(self, results) -> str:
+        return "\n\n".join(res["text"] for res in results)
+
+    def _build_empty_response(self) -> Dict[str, str]:
+        return {
+            "answer": "I could not find relevant information in the documents.",
+            "sources": [],
+        }
+
+    def _build_success_response(self, answer: str, results: List) -> Dict[str, Any]:
+        return {
+            "answer": answer,
+            "sources": [
+                {
+                    "document": res["document"],
+                    "chunk_id": res["chunk_id"],
+                    "score": res["score"],
+                }
+                for res in results
+            ],
+        }
