@@ -5,3 +5,14 @@ target-version = ['py311']
 [tool.isort]
 skip = ["env-mini-knowledge-api", "__pycache__", ".pytest_cache", ".mypy_cache"]
 profile = "black"
+
+[tool.flake8]
+exclude = [
+    "env-mini-knowledge-api",
+    "__pycache__",
+    ".git",
+    ".pytest_cache",
+    ".mypy_cache",
+    "build",
+    "dist"
+]
