@@ -21,19 +21,38 @@ class RAGService:
     # PUBLIC API
     # -----------------------------
 
-    def ask(self, question: str) -> dict:
-        self._ensure_initialized()
+    def ask(self, question: str) -> Dict[str, Any]:
+        """
+        Process a user question using a retrieval-augmented generation pipeline.
 
-        retrieval_results = self._retrieve(question)
+        Steps:
+        1. Ensure the system is initialized.
+        2. Retrieve relevant documents or chunks related to the question.
+        3. If no relevant information is found, return an empty response.
+        4. Build a context from the retrieved results.
+        5. Generate an answer using the LLM based on the context and question.
+        6. Return the generated answer along with retrieval metadata.
+
+        Args:
+            question (str): The user question to be answered.
+
+        Returns:
+            dict: A response dictionary containing the generated answer and
+            the retrieval results. If no results are found, an empty response
+            structure is returned.
+        """
+        self.ensure_initialized()
+
+        retrieval_results = self.retrieve(question)
 
         if not retrieval_results:
-            return self._build_empty_response()
+            return self.build_empty_response()
 
-        context = self._build_context(retrieval_results)
+        context = self.build_context(retrieval_results)
 
         answer = self.llm.generate_answer(context, question)
 
-        return self._build_success_response(answer, retrieval_results)
+        return self.build_success_response(answer, retrieval_results)
 
     def reindex(self):
         """
@@ -53,25 +72,25 @@ class RAGService:
         if self.is_initialized:
             return
 
-        if self._index_exists():
-            self._load_index()
+        if self.index_exists():
+            self.load_index()
         else:
-            self._create_index()
+            self.create_index()
 
         self.is_initialized = True
 
-    def _ensure_initialized(self):
+    def ensure_initialized(self):
         """
         Lazy initialization safeguard.
         """
         if not self.is_initialized:
             self.initialize()
 
-    def _index_exists(self) -> bool:
+    def index_exists(self) -> bool:
         index_path = os.path.join(parameters.VECTOR_STORE_PATH, "index.faiss")
         return os.path.exists(index_path)
 
-    def _create_index(self):
+    def create_index(self):
         print("Creating new vector index...")
 
         documents = self.processor.process_documents()
@@ -85,7 +104,7 @@ class RAGService:
         self.vector_store.add_embeddings(embeddings, documents)
         self.vector_store.save()
 
-    def _load_index(self):
+    def load_index(self):
         print("Loading existing vector index...")
 
         dummy_embedding = self.embedder.embed_text("dimension check")
@@ -94,7 +113,7 @@ class RAGService:
         self.vector_store = VectorStore(dimension)
         self.vector_store.load()
 
-    def _retrieve(self, question: str) -> List[Dict[str, Any]]:
+    def retrieve(self, question: str) -> List[Dict[str, Any]]:
         query_embedding = self.embedder.embed_text(question)
         results = self.vector_store.search(query_embedding)
 
@@ -102,22 +121,23 @@ class RAGService:
 
         return filtered
 
-    def _build_context(self, results) -> str:
+    def build_context(self, results) -> str:
         return "\n\n".join(res["text"] for res in results)
 
-    def _build_empty_response(self) -> Dict[str, str]:
+    def build_empty_response(self) -> Dict[str, str]:
         return {
             "answer": "I could not find relevant information in the documents.",
             "sources": [],
         }
 
-    def _build_success_response(self, answer: str, results: List) -> Dict[str, Any]:
+    def build_success_response(self, answer: str, results: List) -> Dict[str, Any]:
         return {
             "answer": answer,
             "sources": [
                 {
                     "document": res["document"],
-                    "chunk_id": res["chunk_id"],
+                    "page": res["page"],
+                    "text": res["text"],
                     "score": res["score"],
                 }
                 for res in results
