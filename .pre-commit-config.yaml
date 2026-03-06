@@ -9,6 +9,13 @@ repos:
     rev: 5.13.2
     hooks:
       - id: isort
+        exclude: |
+          (?x)^(
+            env-mini-knowledge-api/|
+            __pycache__/|
+            \.pytest_cache/|
+            \.mypy_cache/
+          )
 
   - repo: https://github.com/PyCQA/flake8
     rev: 7.0.0

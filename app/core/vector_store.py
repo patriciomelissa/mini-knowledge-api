@@ -36,6 +36,7 @@ class VectorStore:
                     {
                         "text": self.metadata[idx]["text"],
                         "document": self.metadata[idx]["document"],
+                        "page": self.metadata[idx]["page"],
                         "chunk_id": self.metadata[idx]["chunk_id"],
                         "score": float(dist),
                     }

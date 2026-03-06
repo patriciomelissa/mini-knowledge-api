@@ -27,25 +27,27 @@ class DocumentProcessor:
         - Chunk text
         - Attach metadata
         """
-        processed_chunks = []
+        documents = []
 
-        for filepath in self._get_document_files():
-            filename = os.path.basename(filepath)
+        for filepath in self.get_files():
 
-            raw_text = self._extract_text(filepath)
-            clean_text = self._clean_text(raw_text)
-            chunks = self._chunk_text(clean_text)
+            pages = self.extract_pages(filepath)
+            for page_number, text in pages:
+                cleaned = self.clean_text(text)
+                chunks = self.chunk_text(cleaned)
+                docs = self.build_metadata(
+                    os.path.basename(filepath), chunks, page_number
+                )
 
-            metadata_chunks = self._build_metadata(filename, chunks)
-            processed_chunks.extend(metadata_chunks)
+                documents.extend(docs)
 
-        return processed_chunks
+        return documents
 
     # =============================
     # INTERNAL STEPS
     # =============================
 
-    def _get_document_files(self) -> List[str]:
+    def get_files(self) -> List[str]:
         """
         Retrieve all PDF files from data directory.
         """
@@ -55,7 +57,7 @@ class DocumentProcessor:
             if f.endswith(".pdf")
         ]
 
-    def _extract_text(self, filepath: str) -> str:
+    def extract_text(self, filepath: str) -> str:
         """
         Extract text from PDF using PyMuPDF.
         """
@@ -67,7 +69,18 @@ class DocumentProcessor:
 
         return text
 
-    def _clean_text(self, text: str) -> str:
+    def extract_pages(self, filepath: str) -> list:
+        """ """
+        pages = []
+
+        with fitz.open(filepath) as doc:
+            for page_number, page in enumerate(doc):
+                text = page.get_text("text")
+                pages.append((page_number + 1, text))
+
+        return pages
+
+    def clean_text(self, text: str) -> str:
         """
         Basic text cleaning to improve embedding quality.
         """
@@ -75,7 +88,7 @@ class DocumentProcessor:
         text = text.strip()
         return text
 
-    def _chunk_text(self, text: str) -> List[str]:
+    def chunk_text(self, text: str) -> List[str]:
         """
         Chunk text using sliding window approach.
         """
@@ -92,7 +105,9 @@ class DocumentProcessor:
 
         return chunks
 
-    def _build_metadata(self, filename: str, chunks: List[str]) -> List[Dict]:
+    def build_metadata(
+        self, filename: str, chunks: List[str], page_number: int
+    ) -> List[Dict]:
         """
         Attach metadata to each chunk.
         """
@@ -103,6 +118,7 @@ class DocumentProcessor:
                 {
                     "text": chunk,
                     "document": filename,
+                    "page": page_number,
                     "chunk_id": i,
                     "chunk_length": len(chunk),
                 }
