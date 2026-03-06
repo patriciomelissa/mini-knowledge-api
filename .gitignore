@@ -1,6 +1,5 @@
 # Virtual environment
-env*/
-.env
+env-mini-knowledge-api/
 
 # Python cache
 __pycache__/
@@ -17,3 +16,4 @@ __pycache__/
 
 # Other files
 **/vector_store
+.env
