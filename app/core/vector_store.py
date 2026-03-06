@@ -9,13 +9,38 @@ from app.config import parameters
 
 
 class VectorStore:
+    """
+    Vector similarity search storage using FAISS index.
 
-    def __init__(self, dimension: int):
+    This class manages embedding storage, similarity search operations,
+    and persistence of vector index and document metadata.
+
+    The store supports:
+        - Adding embeddings and associated document metadata.
+        - Performing nearest neighbor search.
+        - Saving and loading index and metadata from disk.
+
+    Attributes:
+        dimension (int): Embedding vector dimension.
+        index (faiss.IndexFlatL2): FAISS L2 similarity index.
+        metadata (List[Dict[str, Any]]): Document metadata storage.
+    """
+
+    def __init__(self, dimension: int) -> None:
         self.dimension = dimension
         self.index = faiss.IndexFlatL2(dimension)
         self.metadata = []
 
-    def add_embeddings(self, embeddings: List[List[float]], documents: List[Dict]):
+    def add_embeddings(
+        self, embeddings: List[List[float]], documents: List[Dict[str, Any]]
+    ) -> None:
+        """
+        Add embeddings and corresponding document metadata to the vector store.
+
+        Args:
+            embeddings (List[List[float]]): List of embedding vectors.
+            documents (List[Dict[str, Any]]): List of document metadata dictionaries.
+        """
         vectors = np.array(embeddings).astype("float32")
         self.index.add(vectors)
         self.metadata.extend(documents)
@@ -23,6 +48,16 @@ class VectorStore:
     def search(
         self, query_embedding: List[float], top_k: int = None
     ) -> List[Dict[str, Any]]:
+        """
+        Perform similarity search on the vector index.
+
+        Args:
+            query_embedding (List[float]): Query embedding vector.
+            top_k (Optional[int]): Number of top results to retrieve.
+
+        Returns:
+            List[Dict[str, Any]]: Ranked search results.
+        """
         if top_k is None:
             top_k = parameters.TOP_K
 
@@ -44,7 +79,10 @@ class VectorStore:
 
         return results
 
-    def save(self):
+    def save(self) -> None:
+        """
+        Persist vector index and metadata to disk.
+        """
         # create the vector_store folder
         os.makedirs(parameters.VECTOR_STORE_PATH, exist_ok=True)
         # create the index.faiss file
@@ -60,7 +98,10 @@ class VectorStore:
         ) as f:
             json.dump(self.metadata, f, ensure_ascii=False, indent=4)
 
-    def load(self):
+    def load(self) -> None:
+        """
+        Load vector index and metadata from disk if they exist.
+        """
         index_path = os.path.join(parameters.VECTOR_STORE_PATH, "index.faiss")
         chunks_metadata_path = os.path.join(
             parameters.VECTOR_STORE_PATH, "chunks_metadata.json"

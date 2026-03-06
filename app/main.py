@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 
 import uvicorn
 from fastapi import FastAPI
@@ -10,7 +11,24 @@ rag_service = RAGService()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """
+    Application lifespan event handler.
+
+    This function manages startup and shutdown lifecycle events.
+
+    During startup:
+        - Initializes the RAG service.
+
+    During shutdown:
+        - Placeholder for future cleanup logic.
+
+    Args:
+        app (FastAPI): FastAPI application instance.
+
+    Yields:
+        AsyncGenerator[None, None]: Lifecycle control generator.
+    """
     # Startup
     print("Initializing RAG service...")
     rag_service.initialize()
@@ -25,7 +43,13 @@ app.include_router(router)
 
 
 @app.get("/")
-def root():
+def root() -> dict:
+    """
+    Root endpoint to verify if the API is running.
+
+    Returns:
+        dict: Simple health check message.
+    """
     return {"message": "API is running"}
 
 

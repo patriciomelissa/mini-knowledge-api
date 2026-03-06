@@ -9,8 +9,29 @@ from app.services.document_processor import DocumentProcessor
 
 
 class RAGService:
+    """
+    Retrieval-Augmented Generation (RAG) service pipeline.
 
-    def __init__(self):
+    This service orchestrates document retrieval and language model generation
+    using embeddings and vector similarity search.
+
+    Pipeline overview:
+        1. Ensure system initialization.
+        2. Retrieve relevant document chunks for a given question.
+        3. If no relevant documents are found, return an empty response.
+        4. Construct context from retrieved results.
+        5. Generate an answer using an LLM based on context.
+        6. Return the answer along with retrieval metadata.
+
+    Attributes:
+        embedder (EmbeddingService): Service used to generate embeddings.
+        processor (DocumentProcessor): Service used to process source documents.
+        vector_store (Optional[VectorStore]): Vector database instance.
+        is_initialized (bool): Initialization state flag.
+        llm (LocalLLMService): Language model service used for answer generation.
+    """
+
+    def __init__(self) -> None:
         self.embedder = EmbeddingService()
         self.processor = DocumentProcessor()
         self.vector_store: Optional[VectorStore] = None
@@ -34,12 +55,11 @@ class RAGService:
         6. Return the generated answer along with retrieval metadata.
 
         Args:
-            question (str): The user question to be answered.
+            question (str): User question to be answered.
 
         Returns:
-            dict: A response dictionary containing the generated answer and
-            the retrieval results. If no results are found, an empty response
-            structure is returned.
+            Dict[str, Any]: Response containing the generated answer and retrieval
+            metadata.
         """
         self.ensure_initialized()
 
@@ -54,20 +74,24 @@ class RAGService:
 
         return self.build_success_response(answer, retrieval_results)
 
-    def reindex(self):
+    def reindex(self) -> None:
         """
-        Force rebuild of the index.
+        Force rebuild of the vector index.
+
+        This method recreates the embedding index from scratch.
         """
-        self._create_index()
+        self.create_index()
         self.is_initialized = True
 
     # -----------------------------
     # INTERNAL STEPS
     # -----------------------------
 
-    def initialize(self):
+    def initialize(self) -> None:
         """
-        Safe initialization. Can be called multiple times.
+        Safely initialize the RAG service.
+
+        This method can be called multiple times without side effects.
         """
         if self.is_initialized:
             return
@@ -81,16 +105,27 @@ class RAGService:
 
     def ensure_initialized(self):
         """
-        Lazy initialization safeguard.
+        Lazy initialization guard.
+
+        Ensures the vector index is loaded or created before use.
         """
         if not self.is_initialized:
             self.initialize()
 
     def index_exists(self) -> bool:
+        """
+        Check if vector index storage file exists.
+
+        Returns:
+            bool: True if index file exists, False otherwise.
+        """
         index_path = os.path.join(parameters.VECTOR_STORE_PATH, "index.faiss")
         return os.path.exists(index_path)
 
-    def create_index(self):
+    def create_index(self) -> None:
+        """
+        Create a new vector index from processed documents.
+        """
         print("Creating new vector index...")
 
         documents = self.processor.process_documents()
@@ -104,7 +139,11 @@ class RAGService:
         self.vector_store.add_embeddings(embeddings, documents)
         self.vector_store.save()
 
-    def load_index(self):
+    def load_index(self) -> None:
+        """
+        Load an existing vector index from storage.
+
+        """
         print("Loading existing vector index...")
 
         dummy_embedding = self.embedder.embed_text("dimension check")
@@ -114,6 +153,16 @@ class RAGService:
         self.vector_store.load()
 
     def retrieve(self, question: str) -> List[Dict[str, Any]]:
+        """
+        Retrieve relevant documents based on question embedding similarity.
+
+        Args:
+            question (str): User question.
+
+        Returns:
+            List[Dict[str, Any]]: Retrieval search results filtered by distance
+            threshold.
+        """
         query_embedding = self.embedder.embed_text(question)
         results = self.vector_store.search(query_embedding)
 
@@ -121,16 +170,43 @@ class RAGService:
 
         return filtered
 
-    def build_context(self, results) -> str:
+    def build_context(self, results: List[Dict[str, Any]]) -> str:
+        """
+        Build context string from retrieval results.
+
+        Args:
+            results (List[Dict[str, Any]]): Retrieval results.
+
+        Returns:
+            str: Concatenated context text.
+        """
         return "\n\n".join(res["text"] for res in results)
 
-    def build_empty_response(self) -> Dict[str, str]:
+    def build_empty_response(self) -> List[Dict[str, Any]]:
+        """
+        Build response structure when no retrieval results are found.
+
+        Returns:
+            Dict[str, Any]: Empty response template.
+        """
         return {
             "answer": "I could not find relevant information in the documents.",
             "sources": [],
         }
 
-    def build_success_response(self, answer: str, results: List) -> Dict[str, Any]:
+    def build_success_response(
+        self, answer: str, results: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Build successful response structure.
+
+        Args:
+            answer (str): Generated answer.
+            results (List[Dict[str, Any]]): Retrieval results.
+
+        Returns:
+            Dict[str, Any]: Response containing answer and source metadata.
+        """
         return {
             "answer": answer,
             "sources": [

@@ -8,8 +8,23 @@ from app.config import parameters
 
 
 class DocumentProcessor:
+    """
+    Document processing pipeline for extracting, cleaning, and chunking PDF text.
 
-    def __init__(self):
+    This class is responsible for preparing documents for embedding generation by:
+        - Loading PDF files from the data directory.
+        - Extracting text from PDF pages.
+        - Cleaning raw text.
+        - Splitting text into manageable chunks.
+        - Attaching metadata to chunks.
+
+    Attributes:
+        data_path (str): Directory path containing source documents.
+        chunk_size (int): Size of text chunks.
+        chunk_overlap (int): Overlap size between consecutive chunks.
+    """
+
+    def __init__(self) -> None:
         self.data_path = parameters.DATA_PATH
         self.chunk_size = parameters.CHUNK_SIZE
         self.chunk_overlap = parameters.CHUNK_OVERLAP
@@ -20,12 +35,17 @@ class DocumentProcessor:
 
     def process_documents(self) -> List[Dict]:
         """
-        Main pipeline:
-        - Load documents
-        - Extract text
-        - Clean text
-        - Chunk text
-        - Attach metadata
+        Main document processing pipeline.
+
+        Steps:
+            1. Load documents.
+            2. Extract text from PDF pages.
+            3. Clean extracted text.
+            4. Split text into chunks.
+            5. Attach metadata to chunks.
+
+        Returns:
+            List[Dict]: List of processed document chunk metadata.
         """
         documents = []
 
@@ -49,7 +69,10 @@ class DocumentProcessor:
 
     def get_files(self) -> List[str]:
         """
-        Retrieve all PDF files from data directory.
+        Retrieve all PDF files from the data directory.
+
+        Returns:
+            List[str]: List of PDF file paths.
         """
         return [
             os.path.join(self.data_path, f)
@@ -59,7 +82,13 @@ class DocumentProcessor:
 
     def extract_text(self, filepath: str) -> str:
         """
-        Extract text from PDF using PyMuPDF.
+        Extract full text from a PDF file.
+
+        Args:
+            filepath (str): Path to PDF file.
+
+        Returns:
+            str: Extracted text content.
         """
         text = ""
 
@@ -69,8 +98,16 @@ class DocumentProcessor:
 
         return text
 
-    def extract_pages(self, filepath: str) -> list:
-        """ """
+    def extract_pages(self, filepath: str) -> List:
+        """
+        Extract text page by page from PDF file.
+
+        Args:
+            filepath (str): Path to PDF file.
+
+        Returns:
+            List: List of tuples (page_number, page_text).
+        """
         pages = []
 
         with fitz.open(filepath) as doc:
@@ -82,7 +119,13 @@ class DocumentProcessor:
 
     def clean_text(self, text: str) -> str:
         """
-        Basic text cleaning to improve embedding quality.
+        Clean text by removing excessive whitespace.
+
+        Args:
+            text (str): Raw text.
+
+        Returns:
+            str: Cleaned text.
         """
         text = re.sub(r"\s+", " ", text)  # Remove excessive whitespace
         text = text.strip()
@@ -90,7 +133,13 @@ class DocumentProcessor:
 
     def chunk_text(self, text: str) -> List[str]:
         """
-        Chunk text using sliding window approach.
+        Split text into chunks using sliding window strategy.
+
+        Args:
+            text (str): Input text.
+
+        Returns:
+            List[str]: List of text chunks.
         """
         chunks = []
         start = 0
@@ -109,7 +158,15 @@ class DocumentProcessor:
         self, filename: str, chunks: List[str], page_number: int
     ) -> List[Dict]:
         """
-        Attach metadata to each chunk.
+        Build metadata dictionary for each text chunk.
+
+        Args:
+            filename (str): Source document filename.
+            chunks (List[str]): List of text chunks.
+            page_number (int): Page number where chunk was extracted.
+
+        Returns:
+            List[Dict]: List of chunk metadata dictionaries.
         """
         metadata_chunks = []
 
