@@ -36,6 +36,7 @@ class Parameters:
     # RAG
     CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", 500))
     CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", 100))
+    MIN_CHUNK_SIZE: int = int(os.getenv("MIN_CHUNK_SIZE", 120))
     TOP_K: int = int(os.getenv("TOP_K", 8))
 
     # FAISS
