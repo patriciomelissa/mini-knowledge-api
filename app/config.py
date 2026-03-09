@@ -30,13 +30,17 @@ class Parameters:
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY")
     MODEL_NAME: str = os.getenv("MODEL_NAME", "gpt-4o-mini")
 
+    # to create CONTEXT for the LLM
+    MAX_CONTEXT_CHARS: int = int(os.getenv("MAX_CONTEXT_CHARS", 4000))
+
     # RAG
-    CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", 900))
-    CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", 150))
-    TOP_K: int = int(os.getenv("TOP_K", 3))
+    CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", 500))
+    CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", 100))
+    TOP_K: int = int(os.getenv("TOP_K", 8))
 
     # FAISS
     MAX_DISTANCE: float = 2
+    MIN_SCORE: float = 0.25
 
     # Paths
     DATA_PATH: str = os.getenv("DATA_PATH", "./data")
