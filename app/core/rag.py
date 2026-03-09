@@ -68,11 +68,15 @@ class RAGService:
         if not retrieval_results:
             return self.build_empty_response()
 
-        context = self.build_context(retrieval_results)
+        sorted_results = sorted(
+            retrieval_results, key=lambda x: x["score"], reverse=True
+        )
+
+        context = self.build_context_using_charslimit(sorted_results)
 
         answer = self.llm.generate_answer(context, question)
 
-        return self.build_success_response(answer, retrieval_results)
+        return self.build_success_response(answer, sorted_results)
 
     def reindex(self) -> None:
         """
@@ -146,11 +150,11 @@ class RAGService:
         """
         print("Loading existing vector index...")
 
-        dummy_embedding = self.embedder.embed_text("dimension check")
-        dimension = len(dummy_embedding)
-
-        self.vector_store = VectorStore(dimension)
+        self.vector_store = VectorStore(0)
         self.vector_store.load()
+
+        # print("Index size:", self.vector_store.index.ntotal)
+        # print("Metadata size:", len(self.vector_store.metadata))
 
     def retrieve(self, question: str) -> List[Dict[str, Any]]:
         """
@@ -166,9 +170,10 @@ class RAGService:
         query_embedding = self.embedder.embed_text(question)
         results = self.vector_store.search(query_embedding)
 
-        filtered = [res for res in results if res["score"] <= parameters.MAX_DISTANCE]
+        # for now, this filter is doing inside of the search() funtion
+        # filtered = [res for res in results if res["score"] > parameters.MIN_SCORE]
 
-        return filtered
+        return results
 
     def build_context(self, results: List[Dict[str, Any]]) -> str:
         """
@@ -181,6 +186,50 @@ class RAGService:
             str: Concatenated context text.
         """
         return "\n\n".join(res["text"] for res in results)
+
+    def build_context_with_metadata(self, results: List[Dict[str, Any]]) -> str:
+        """
+        Build context string with metadata from retrieval results.
+
+        Args:
+            results (List[Dict[str, Any]]): Retrieval results.
+
+        Returns:
+            str: Concatenated context text with metadata.
+        """
+        context_parts = []
+
+        for r in results:
+            context_parts.append(
+                f"[Document: {r['document']} | Page: {r['page']}]\n{r['text']}"
+            )
+
+        return "\n\n".join(context_parts)
+
+    def build_context_using_charslimit(self, results: List[Dict[str, Any]]) -> str:
+        """
+        Build context string with metadata from retrieval results
+        but, limit context using characters limit.
+
+        Args:
+            results (List[Dict[str, Any]]): Retrieval results.
+
+        Returns:
+            str: Concatenated context text with metadata.
+        """
+        context_parts = []
+        counter_size = 0
+
+        for r in results:
+            text = r["text"]
+
+            if counter_size + len(text) > parameters.MAX_CONTEXT_CHARS:
+                break
+
+            context_parts.append(text)
+            counter_size += len(text)
+
+        return "\n\n".join(context_parts)
 
     def build_empty_response(self) -> List[Dict[str, Any]]:
         """

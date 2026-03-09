@@ -83,7 +83,7 @@ class EmbeddingService:
         Returns:
             List[float]: Embedding vector representation of the input text.
         """
-        embedding = self.model.encode(text)
+        embedding = self.model.encode(text, normalize_embeddings=True)
         return embedding.tolist()
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
@@ -96,5 +96,5 @@ class EmbeddingService:
         Returns:
             List[List[float]]: List of embedding vectors.
         """
-        embeddings = self.model.encode(texts)
+        embeddings = self.model.encode(texts, normalize_embeddings=True)
         return embeddings.tolist()

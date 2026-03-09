@@ -22,13 +22,13 @@ class VectorStore:
 
     Attributes:
         dimension (int): Embedding vector dimension.
-        index (faiss.IndexFlatL2): FAISS L2 similarity index.
+        index (faiss.IndexFlatIP): FAISS index.
         metadata (List[Dict[str, Any]]): Document metadata storage.
     """
 
     def __init__(self, dimension: int) -> None:
         self.dimension = dimension
-        self.index = faiss.IndexFlatL2(dimension)
+        self.index = faiss.IndexFlatIP(dimension)
         self.metadata = []
 
     def add_embeddings(
@@ -62,10 +62,16 @@ class VectorStore:
             top_k = parameters.TOP_K
 
         query_vector = np.array([query_embedding]).astype("float32")
-        distances, indices = self.index.search(query_vector, top_k)
+        scores, indices = self.index.search(query_vector, top_k)
 
         results = []
-        for idx, dist in zip(indices[0], distances[0]):
+        for score, idx in zip(scores[0], indices[0]):
+            # filter results using MIN_SCORE parameters
+            # improve the quality of the results
+            # we want to keep the values > MIN_SCORE
+            if score < parameters.MIN_SCORE:
+                continue
+
             if idx < len(self.metadata):
                 results.append(
                     {
@@ -73,7 +79,7 @@ class VectorStore:
                         "document": self.metadata[idx]["document"],
                         "page": self.metadata[idx]["page"],
                         "chunk_id": self.metadata[idx]["chunk_id"],
-                        "score": float(dist),
+                        "score": float(score),
                     }
                 )
 
@@ -113,3 +119,6 @@ class VectorStore:
         if os.path.exists(chunks_metadata_path):
             with open(chunks_metadata_path, "r", encoding="utf-8") as f:
                 self.metadata = json.load(f)
+
+        if self.index.ntotal != len(self.metadata):
+            raise ValueError("Vector index and metadata are inconsistent")
