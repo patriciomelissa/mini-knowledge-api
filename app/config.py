@@ -37,11 +37,12 @@ class Parameters:
     CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", 500))
     CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", 100))
     MIN_CHUNK_SIZE: int = int(os.getenv("MIN_CHUNK_SIZE", 120))
-    TOP_K: int = int(os.getenv("TOP_K", 8))
+    TOP_K: int = int(os.getenv("TOP_K", 10))
 
     # FAISS
     MAX_DISTANCE: float = 2
     MIN_SCORE: float = 0.25
+    MIN_RESULTS: int = 5
 
     # Paths
     DATA_PATH: str = os.getenv("DATA_PATH", "./data")

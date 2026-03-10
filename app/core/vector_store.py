@@ -64,26 +64,33 @@ class VectorStore:
         query_vector = np.array([query_embedding]).astype("float32")
         scores, indices = self.index.search(query_vector, top_k)
 
-        results = []
+        total_results = []
         for score, idx in zip(scores[0], indices[0]):
-            # filter results using MIN_SCORE parameters
-            # improve the quality of the results
-            # we want to keep the values > MIN_SCORE
-            if score < parameters.MIN_SCORE:
-                continue
+            total_results.append(
+                {
+                    "text": self.metadata[idx]["text"],
+                    "document": self.metadata[idx]["document"],
+                    "page": self.metadata[idx]["page"],
+                    "chunk_id": self.metadata[idx]["chunk_id"],
+                    "score": float(score),
+                }
+            )
 
-            if idx < len(self.metadata):
-                results.append(
-                    {
-                        "text": self.metadata[idx]["text"],
-                        "document": self.metadata[idx]["document"],
-                        "page": self.metadata[idx]["page"],
-                        "chunk_id": self.metadata[idx]["chunk_id"],
-                        "score": float(score),
-                    }
-                )
+        # filter results using MIN_SCORE parameters
+        # improve the quality of the results
+        # we want to keep the values > MIN_SCORE
+        filter_results = [
+            res for res in total_results if res["score"] >= parameters.MIN_SCORE
+        ]
 
-        return results
+        # if there are few results, important results may be excluded.
+        # if this is verified, we use MIN_RESULTS to relax the MIN_SCORE FILTER
+        if len(filter_results) < parameters.MIN_RESULTS:
+            filter_results = total_results[: parameters.TOP_K]
+
+        filter_results = sorted(filter_results, key=lambda x: x["score"], reverse=True)
+
+        return filter_results
 
     def save(self) -> None:
         """
