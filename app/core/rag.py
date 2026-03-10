@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 from app.config import parameters
 from app.core.embeddings import EmbeddingService
 from app.core.llm_local import LocalLLMService
+from app.core.reranker import Reranker
 from app.core.vector_store import VectorStore
 from app.services.document_processor import DocumentProcessor
 
@@ -35,6 +36,7 @@ class RAGService:
         self.embedder = EmbeddingService()
         self.processor = DocumentProcessor()
         self.vector_store: Optional[VectorStore] = None
+        self.reranker = Reranker()
         self.is_initialized = False
         self.llm = LocalLLMService()
 
@@ -50,9 +52,10 @@ class RAGService:
         1. Ensure the system is initialized.
         2. Retrieve relevant documents or chunks related to the question.
         3. If no relevant information is found, return an empty response.
-        4. Build a context from the retrieved results.
-        5. Generate an answer using the LLM based on the context and question.
-        6. Return the generated answer along with retrieval metadata.
+        4. Sorts the documents based on these scores to improve ranking quality.
+        5. Build a context from the retrieved results.
+        6. Generate an answer using the LLM based on the context and question.
+        7. Return the generated answer along with retrieval metadata.
 
         Args:
             question (str): User question to be answered.
@@ -68,15 +71,14 @@ class RAGService:
         if not retrieval_results:
             return self.build_empty_response()
 
-        sorted_results = sorted(
-            retrieval_results, key=lambda x: x["score"], reverse=True
-        )
+        # apply reranking
+        reranked_results = self.reranker.rerank(question, retrieval_results)
 
-        context = self.build_context_using_charslimit(sorted_results)
+        context = self.build_context_using_charslimit(reranked_results)
 
         answer = self.llm.generate_answer(context, question)
 
-        return self.build_success_response(answer, sorted_results)
+        return self.build_success_response(answer, reranked_results)
 
     def reindex(self) -> None:
         """
