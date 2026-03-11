@@ -1,0 +1,22 @@
+[
+  {
+    "question": "How many sections is the exam divided into?",
+    "expected_keywords": ["exam", "4 sections"]
+  },
+  {
+    "question": "What percentage of the exam includes questions from section 1?",
+    "expected_keywords": ["30%", "of the exam"]
+  },
+  {
+    "question": "What percentage of the exam includes questions from section 2?",
+    "expected_keywords": ["27%", "of the exam"]
+  },
+  {
+    "question": "What is the title of section 3?",
+    "expected_keywords": ["Data Pipeline Orchestration", "Data Pipeline", "Orchestration"]
+  },
+  {
+    "question": "What cloud computing concepts should candidates understand?",
+    "expected_keywords": ["IaaS", "PaaS", "SaaS"]
+  }
+]
