@@ -56,13 +56,14 @@ class DocumentProcessor:
             pages = self.extract_pages(filepath)
             for page_number, text in pages:
                 cleaned = self.clean_text(text)
-                # paragraph normalization
-                paragraphs = self.split_paragraphs(cleaned)
-                full_text = " ".join(paragraphs)
-                chunks = self.create_chunks(full_text)
-                chunks_list = self.enforce_min_chunk_size(chunks)
+                # paragraph normalization ->not using for now
+                # paragraphs = self.split_paragraphs(cleaned)
+                # full_text = " ".join(paragraphs)
+                chunks = self.create_chunks_with_sentences(cleaned)
+                # use this when use paragraph normalization
+                # chunks_list = self.enforce_min_chunk_size(chunks)
                 docs = self.build_metadata(
-                    os.path.basename(filepath), chunks_list, page_number
+                    os.path.basename(filepath), chunks, page_number
                 )
 
                 documents.extend(docs)
@@ -187,6 +188,84 @@ class DocumentProcessor:
                 chunks.append(chunk)
 
             start += self.chunk_size - self.chunk_overlap
+
+        return chunks
+
+    def create_chunks_with_sentences(self, text: str) -> List[str]:
+        """
+        Split text into chunks using sentences while respecting CHUNK_SIZE
+        and CHUNK_OVERLAP.
+
+        Args:
+            text (str): Input text.
+
+        Returns:
+            List[str]: List of text chunks.
+        """
+        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+
+        chunks = []
+        current_chunk = []
+        current_length = 0
+
+        # Garantir que CHUNK_OVERLAP < CHUNK_SIZE
+        if parameters.CHUNK_OVERLAP >= parameters.CHUNK_SIZE:
+            raise ValueError("CHUNK_OVERLAP must be smaller than CHUNK_SIZE")
+
+        for sentence in sentences:
+            sentence_len = len(sentence)
+
+            # cortar sentenças muito longas
+            if sentence_len > parameters.CHUNK_SIZE:
+                if current_chunk:
+                    chunks.append(" ".join(current_chunk))
+                    current_chunk = []
+                    current_length = 0
+
+                step = parameters.CHUNK_SIZE - parameters.CHUNK_OVERLAP
+                for start in range(0, sentence_len, step):
+                    piece = sentence[start : start + parameters.CHUNK_SIZE]
+
+                    # se o pedaço for menor que CHUNK_SIZE, guardar no current_chunk
+                    if len(piece) == parameters.CHUNK_SIZE:
+                        chunks.append(piece)
+                    else:
+                        current_chunk.append(piece)
+                        current_length = len(piece)
+                continue
+
+            # criar novo chunk se ultrapassar CHUNK_SIZE
+            if current_length + sentence_len > parameters.CHUNK_SIZE:
+                # calcular overlap usando slicing
+                overlap_length = 0
+                overlap_start_idx = len(current_chunk)
+                for idx in reversed(range(len(current_chunk))):
+                    if (
+                        overlap_length + len(current_chunk[idx])
+                        > parameters.CHUNK_OVERLAP
+                    ):
+                        break
+                    overlap_length += len(current_chunk[idx])
+                    overlap_start_idx = idx
+
+                # adicionar chunk atual
+                chunks.append(" ".join(current_chunk))
+                # preparar novo chunk com overlap
+                current_chunk = current_chunk[overlap_start_idx:]
+                current_length = sum(len(s) for s in current_chunk)
+
+            # adicionar sentença atual
+            current_chunk.append(sentence)
+            current_length += sentence_len
+
+        # adicionar último chunk
+        if current_chunk:
+            chunks.append(" ".join(current_chunk))
+
+        # merge do último chunk pequeno
+        if len(chunks) > 1 and len(chunks[-1]) < parameters.MIN_CHUNK_SIZE:
+            chunks[-2] += " " + chunks[-1]
+            chunks.pop()
 
         return chunks
 
