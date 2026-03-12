@@ -1,4 +1,5 @@
 import os
+import time
 from typing import Any, Dict, List, Optional
 
 from app.config import parameters
@@ -7,6 +8,10 @@ from app.core.llm_local import LocalLLMService
 from app.core.reranker import Reranker
 from app.core.vector_store import VectorStore
 from app.services.document_processor import DocumentProcessor
+from observability.logging_config import setup_logging
+from observability.rag_tracer import RAGTracer
+
+setup_logging()
 
 
 class RAGService:
@@ -39,6 +44,7 @@ class RAGService:
         self.reranker = Reranker()
         self.is_initialized = False
         self.llm = LocalLLMService()
+        self.tracer = RAGTracer()
 
     # -----------------------------
     # PUBLIC API
@@ -49,24 +55,35 @@ class RAGService:
         Process a user question using a retrieval-augmented generation pipeline.
 
         Steps:
-        1. Ensure the system is initialized.
+        1. Ensure the system is initialized. Log the incoming user query.
         2. Retrieve relevant documents or chunks related to the question.
+        Log retrieval statistics (number of chunks, similarity score, pages).
         3. If no relevant information is found, return an empty response.
-        4. Sorts the documents based on these scores to improve ranking quality.
-        5. Build a context from the retrieved results.
+        4. Apply cross-encoder reranking to improve document ranking quality.
+        5. Build a context from the reranked results while respecting context
+        size limits. Log context statistics.
         6. Generate an answer using the LLM based on the context and question.
+        Log LLM response time.
         7. Return the generated answer along with retrieval metadata.
 
         Args:
             question (str): User question to be answered.
 
         Returns:
-            Dict[str, Any]: Response containing the generated answer and retrieval
-            metadata.
+            Dict[str, Any]: Response containing:
+            - answer (str): Generated answer from the LLM.
+            - sources (List[Dict[str, Any]]): Retrieved document metadata used
+             as context.
         """
         self.ensure_initialized()
 
+        # logging
+        self.tracer.trace_query(question)
+
         retrieval_results = self.retrieve(question)
+
+        # logging
+        self.tracer.trace_retrieval(retrieval_results)
 
         if not retrieval_results:
             return self.build_empty_response()
@@ -76,7 +93,14 @@ class RAGService:
 
         context = self.build_context_using_charslimit(reranked_results)
 
+        # logging
+        self.tracer.trace_context(context)
+        start = time.time()
+
         answer = self.llm.generate_answer(context, question)
+
+        # logging
+        self.tracer.trace_llm(start)
 
         return self.build_success_response(answer, reranked_results)
 
