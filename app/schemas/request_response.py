@@ -25,3 +25,23 @@ class AskResponse(BaseModel):
 
     answer: str
     sources: List[Dict[str, Any]]
+
+
+class StateResponse(BaseModel):
+    """
+    Response model for the state check endpoint.
+
+    This model represents the operational status of the RAG service
+    along with basic statistics about the vector store currently
+    loaded in memory.
+
+    Attributes:
+        status (str): Status of the service.
+        vector_index_size (int): Number of vectors stored in the FAISS index.
+        documents_indexed (int): Total number of document chunks indexed
+            in the vector store metadata.
+    """
+
+    status: str
+    vector_index_size: int
+    documents_indexed: int
