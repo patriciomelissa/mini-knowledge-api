@@ -45,3 +45,42 @@ class StateResponse(BaseModel):
     status: str
     vector_index_size: int
     documents_indexed: int
+
+
+class RetrievalResult(BaseModel):
+    """
+    Model representing a single retrieval result.
+
+    This model contains the metadata and similarity score for a
+    document chunk retrieved from the vector store.
+
+    Attributes:
+        document (str): Source document filename.
+        page (int): Page number where the chunk was extracted.
+        chunk_id (int): Identifier of the chunk within the document.
+        score (float): Similarity score (distance) between the query
+            and the retrieved chunk.
+        text (str): Text content of the retrieved chunk.
+    """
+
+    document: str
+    page: int
+    chunk_id: int
+    score: float
+    text: str
+
+
+class RetrievalResponse(BaseModel):
+    """
+    Response model for retrieval debug endpoint.
+
+    This model encapsulates the user query and the list of retrieved
+    document chunks returned by the retrieval step of the RAG pipeline.
+
+    Attributes:
+        question (str): Input query used for retrieval.
+        results (List[RetrievalResult]): List of retrieved results with metadata.
+    """
+
+    question: str
+    results: list[RetrievalResult]
