@@ -17,5 +17,5 @@ __pycache__/
 # Other files
 **/vector_store
 .env
-evaluation/evaluation_results.json
-evaluation/evaluation_summary.json
+app/evaluation/evaluation_results.json
+app/evaluation/evaluation_summary.json
