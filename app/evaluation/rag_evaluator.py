@@ -170,12 +170,12 @@ class RAGEvaluator:
 
 if __name__ == "__main__":
 
-    evaluator = RAGEvaluator(questions_file="evaluation/evaluation_questions.json")
+    evaluator = RAGEvaluator(questions_file="app/evaluation/evaluation_questions.json")
 
     results, metrics = evaluator.evaluate()
 
-    with open("evaluation/evaluation_results.json", "w") as f:
+    with open("app/evaluation/evaluation_results.json", "w") as f:
         json.dump(results, f, indent=2)
 
-    with open("evaluation/evaluation_summary.json", "w") as f:
+    with open("app/evaluation/evaluation_summary.json", "w") as f:
         json.dump(metrics, f, indent=2)

@@ -7,9 +7,9 @@ from app.core.embeddings import EmbeddingService
 from app.core.llm_local import LocalLLMService
 from app.core.reranker import Reranker
 from app.core.vector_store import VectorStore
-from app.services.document_processor import DocumentProcessor
-from observability.logging_config import setup_logging
-from observability.rag_tracer import RAGTracer
+from app.observability.logging_config import setup_logging
+from app.observability.rag_tracer import RAGTracer
+from app.processing.document_processor import DocumentProcessor
 
 setup_logging()
 
