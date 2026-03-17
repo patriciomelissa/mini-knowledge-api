@@ -1,13 +1,18 @@
 from fastapi import APIRouter
 
-from app.schemas.request_response import AskRequest, AskResponse, StateResponse
+from app.schemas.request_response import (
+    AskRequest,
+    AskResponse,
+    RetrievalResponse,
+    StateResponse,
+)
 from app.utils import rag_service
 
 router = APIRouter()
 
 
 @router.post("/ask", response_model=AskResponse)
-def ask_question(request: AskRequest):
+def ask_question(request: AskRequest) -> AskResponse:
     """
     Handle question answering request using the RAG service pipeline.
 
@@ -26,8 +31,41 @@ def ask_question(request: AskRequest):
     return AskResponse(answer=result["answer"], sources=result["sources"])
 
 
+@router.post("/debug/retrieve", response_model=RetrievalResponse)
+def debug_retrieve(request: AskRequest) -> RetrievalResponse:
+    """
+    Debug endpoint for inspecting raw retrieval results.
+
+    This endpoint allows testing and validating the retrieval step of the
+    RAG pipeline independently from reranking and LLM generation.
+
+    Behavior:
+        - Ensures the RAG service is initialized.
+        - Executes vector similarity search using the input question.
+        - Returns retrieved chunks with metadata and similarity scores.
+        - In case of failure, returns a default empty-like result structure.
+
+    Args:
+        request (AskRequest): Request containing the user query.
+
+    Returns:
+        RetrievalResponse: Object containing:
+            - question (str): Input query.
+            - results (List[Dict[str, Any]]): Retrieved document chunks with
+              metadata (document, page, chunk_id, score, text).
+    """
+    try:
+        rag_service.ensure_initialized()
+
+        results = rag_service.retrieve(request.question)
+    except Exception:
+        results = [{"document": "", "page": 0, "chunk_id": 0, "score": 0.0, "text": ""}]
+
+    return RetrievalResponse(question=request.question, results=results)
+
+
 @router.get("/state", response_model=StateResponse)
-def state():
+def state() -> StateResponse:
     """
     State check endpoint for the RAG service.
 
